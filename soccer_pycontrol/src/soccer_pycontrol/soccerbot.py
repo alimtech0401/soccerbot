@@ -60,7 +60,7 @@ class Links(enum.IntEnum):
 
 
 class Soccerbot:
-    standing_hip_height = 0.36  # Hardcoded for now, todo calculate this
+    standing_hip_height = 0.29  # Hardcoded for now, todo calculate this
     walking_hip_height = 0.165
     foot_box = [0.09, 0.07, 0.01474]
     right_collision_center = [0.00385, 0.00401, -0.00737]
@@ -178,16 +178,39 @@ class Soccerbot:
             home = home + "/hdd"
         if os.getenv('ENABLE_PYBULLET', True):
             self.body = pb.loadURDF(home + "/catkin_ws/src/soccerbot/soccer_description/models/soccerbot_box.urdf",
-                                    useFixedBase=useFixedBase,
-                                    flags=pb.URDF_USE_INERTIA_FROM_FILE,
+                                    useFixedBase=useFixedBase, useMaximalCoordinates=False,
+                                    flags=pb.URDF_USE_INERTIA_FROM_FILE | pb.URDF_USE_SELF_COLLISION | pb.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS,
                                     basePosition=[pose.get_position()[0], pose.get_position()[1],
                                                   Soccerbot.standing_hip_height],
                                     baseOrientation=pose.get_orientation())
 
+            # MX-28
+            for i in range(Joints.LEFT_LEG_1, Joints.HEAD_1):
+                                pb.changeDynamics(self.body, i,
+                                 jointLowerLimit=-Soccerbot._joint_limit_low[i],
+                                 jointUpperLimit=Soccerbot._joint_limit_high[i],
+                                 jointLimitForce=2.5)
+            # AX-12
+            for i in range(Joints.LEFT_ARM_1, Joints.LEFT_LEG_1):
+                pb.changeDynamics(self.body, i,
+                                 jointLowerLimit=-Soccerbot._joint_limit_low[i],
+                                 jointUpperLimit=Soccerbot._joint_limit_high[i],
+                                 jointLimitForce=1.5)
+            pb.changeDynamics(self.body, Joints.HEAD_1,
+                             jointLowerLimit=-np.pi, jointUpperLimit=np.pi,
+                             jointLimitForce=self._AX_12_force)
+            pb.changeDynamics(self.body, Joints.HEAD_2,
+                             jointLowerLimit=-np.pi, jointUpperLimit=np.pi,
+                             jointLimitForce=1.5)
         # IMU Stuff
-        self.prev_lin_vel = [0, 0, 0]
-        self.time_step_sim = 1. / 240
-
+        self.prev_lin_vel = np.array([0, 0, 0])
+        self.time_step_sim = 1. / 120
+        self.joint_limit = np.array([np.pi] * (16))
+        self.vel_limit = [2 * np.pi] * (Joints.HEAD_1 - Joints.LEFT_LEG_1)
+        self.vel_limit.extend([(59 / 60) * 2 * np.pi] * (Joints.LEFT_LEG_1 - Joints.LEFT_ARM_1))
+        self.vel_limit = np.array(self.vel_limit, dtype=np.float32)
+        self.imu_limit = np.concatenate((np.array([2. * 9.81] * int((6) / 2)),
+                                    np.array([8.7266] * int((6) / 2))))
         self.foot_center_to_floor = -self.right_collision_center[2] + self.foot_box[2]
 
         # Calculate Constants
@@ -502,7 +525,9 @@ class Soccerbot:
         if verbose:
             print(f'lin_acc = {lin_acc}', end="\t\t")
             print(f'ang_vel = {ang_vel}')
-        return np.concatenate((lin_acc, ang_vel))
+        imu_val = np.concatenate((lin_acc, ang_vel))
+        imu_val = np.clip(imu_val, -self.imu_limit, self.imu_limit)
+        return imu_val
 
     def get_imu(self):
         """
@@ -548,6 +573,37 @@ class Soccerbot:
             locations[index[1] + (index[0] * 2) + 4] = True
         return locations
 
+    def get_foot_pressure_sensors_RL(self, floor):
+        """
+        Checks if 4 corners of the each feet are in contact with ground
+
+        Indicies for looking from above on the feet plates:
+          Left         Right
+        4-------5    0-------1
+        |   ^   |    |   ^   |      ^
+        |   |   |    |   |   |      | : forward direction
+        |       |    |       |
+        6-------7    2-------3
+
+        :param floor: PyBullet body id of the plane the robot is walking on.
+        :return: boolean array of 8 contact points on both feet, True: that point is touching the ground False: otherwise
+        """
+        locations = [-1.] * 8
+        right_pts = pb.getContactPoints(bodyA=self.body, bodyB=floor, linkIndexA=Links.RIGHT_LEG_6)
+        left_pts = pb.getContactPoints(bodyA=self.body, bodyB=floor, linkIndexA=Links.LEFT_LEG_6)
+        right_center = np.array(pb.getLinkState(self.body, linkIndex=Links.RIGHT_LEG_6)[4])
+        left_center = np.array(pb.getLinkState(self.body, linkIndex=Links.LEFT_LEG_6)[4])
+        right_tr = tr.get_rotation_matrix_from_transformation(
+            tr(quaternion=pb.getLinkState(self.body, linkIndex=Links.RIGHT_LEG_6)[5]))
+        left_tr = tr.get_rotation_matrix_from_transformation(
+            tr(quaternion=pb.getLinkState(self.body, linkIndex=Links.LEFT_LEG_6)[5]))
+        for point in right_pts:
+            index = np.signbit(np.matmul(right_tr, point[5] - right_center))[0:2]
+            locations[index[1] + index[0] * 2] = 1.
+        for point in left_pts:
+            index = np.signbit(np.matmul(left_tr, point[5] - left_center))[0:2]
+            locations[index[1] + (index[0] * 2) + 4] = 1.
+        return np.array(locations)
     Kp = 0.8
     Kd = 0.0
     Ki = 0.0005
@@ -670,69 +726,3 @@ class Soccerbot:
 
         return motor_forces
 
-    def joints_pos(self):
-
-        joint_states = pb.getJointStates(self.body, list(range(0, 16, 1)))
-        joints_pos = np.array([state[0] for state in joint_states], dtype=np.float32)
-        # joints_pos = np.unwrap(joints_pos + np.pi) - np.pi
-
-        return joints_pos
-
-    def joints_vel(self):
-        joint_states = pb.getJointStates(self.body, list(range(0, 16, 1)))
-        joints_vel = np.array([state[1] for state in joint_states], dtype=np.float32)
-        # joints_pos = np.unwrap(joints_pos + np.pi) - np.pi
-
-        return joints_vel
-
-    def _global_orn(self):
-        _, orn = pb.getBasePositionAndOrientation(self.body)
-        return np.array(orn, dtype=np.float32)
-
-    def off_orn(self):
-        distance_unit_vec = ((0, 0.3) - self.global_pos()[0:2])
-        distance_unit_vec /= np.linalg.norm(distance_unit_vec)
-        mat = pb.getMatrixFromQuaternion(pb.getBasePositionAndOrientation(self.body)[1])
-        d2_vect = np.array([mat[0], mat[3]], dtype=np.float32)
-        d2_vect /= np.linalg.norm(d2_vect)
-        cos = np.dot(d2_vect, distance_unit_vec)
-        sin = np.linalg.norm(np.cross(distance_unit_vec, d2_vect))
-        vec = np.array([cos, sin], dtype=np.float32)
-        # print(f'Orn: {vec}')
-        vec = np.matmul([[0, 1], [-1, 0]], vec)
-        return vec
-
-    def global_pos(self):
-
-        pos, _ = pb.getBasePositionAndOrientation(self.body)
-        return np.array(pos, dtype=np.float32)
-
-    def motor_control(self, action, joint_angles, env):
-        _MX_28_velocity = 2 * np.pi
-        # CLIP ACTIONS
-        # action = np.clip(action, self._joint_limit_low, self._joint_limit_high)
-        # MX-28s
-        gain = 0.78
-        for i in range(Joints.LEFT_ARM_1, Joints.HEAD_1, 1):
-            joint_cur_pos = pb.getJointState(self.body, i)[0]
-            velocity = action[i]
-            velocity = velocity if joint_cur_pos < env._joint_limit_high[i] else -_MX_28_velocity
-            velocity = velocity if joint_cur_pos > env._joint_limit_low[i] else _MX_28_velocity
-            if velocity != action[i]:
-                print(f'***** Joint {i} capped')
-            action[i] = velocity
-            pb.setJointMotorControl2(bodyIndex=self.body,
-                                    controlMode=pb.VELOCITY_CONTROL,
-                                    jointIndex=i,
-                                    targetVelocity=velocity,
-                                    velocityGain=gain,
-                                    maxVelocity=_MX_28_velocity,
-                                    force=2.5,
-                                    )
-        # pb.setJointMotorControlArray(bodyIndex=self.body,
-        #                                 controlMode=pb.VELOCITY_CONTROL,
-        #                                 jointIndices=list(range(Joints.HEAD_1)),
-        #                                 targetVelocities=action,
-        #                                 velocityGains=[gain] * Joints.HEAD_1,
-        #                                 forces=[2.5] * Joints.HEAD_1,
-        #                                 )

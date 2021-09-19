@@ -19,6 +19,7 @@ class Ball:
         if os.getenv('ENABLE_PYBULLET', True):
             self.ball = p.loadURDF(self.path, basePosition=self.position,
                                    baseOrientation=[0, 0, 0, 1])
+            p.changeDynamics(self.ball, linkIndex=-1, restitution=0.99)
 
     def set_position(self, position):
         if os.getenv('ENABLE_PYBULLET', True):

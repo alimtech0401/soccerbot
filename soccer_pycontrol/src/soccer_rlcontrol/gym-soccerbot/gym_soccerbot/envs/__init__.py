@@ -1,4 +1,4 @@
 from gym_soccerbot.envs.walking_omni_env import WalkingOmni
 from gym_soccerbot.envs.walking_forward_norm_agn_env import WalkingForwardNormAgn
-from gym_soccerbot.envs.kicking_env import Kick
+from gym_soccerbot.envs.kicking_env_old import Kick
 from gym_soccerbot.envs.norm_agn_env import NormAgn

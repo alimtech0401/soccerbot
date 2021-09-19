@@ -15,7 +15,6 @@ import gym_soccerbot
 
 logger = logging.getLogger(__name__)
 
-
 class Links(enum.IntEnum):
     TORSO = -1
     LEFT_ARM_1 = 0
@@ -79,6 +78,7 @@ class Kick(gym.Env):
     _JOINT_DIM = 16
     _HANDS_DIM = 4
     _BALL_LIMIT_DIM = 2
+    _RNN_DIM = 1
 
     #### Joint Limits HARD CODE
     _joint_limit_high = np.zeros(_JOINT_DIM)
@@ -143,32 +143,25 @@ class Kick(gym.Env):
     _CLOSENESS = 0.05  # in meters presumably
     _MAX_ANG_VEL = 8.7266  # LSM6DSOX
     _MAX_LIN_ACC = 2. * 9.81  # LSM6DSOX
-    _CONTROL_MODE = Control_Mode.VELOCITY  # Control_Mode.POSITION
     # Action Space
-    if _CONTROL_MODE == Control_Mode.VELOCITY:
-        if _ENABLE_HANDS:
-            _DIM_SUB_HANDS = 0
-            vel_limit = [_MX_28_velocity] * (Joints.HEAD_1 - Joints.LEFT_LEG_1)
-            vel_limit.extend([_AX_12_velocity] * (Joints.LEFT_LEG_1 - Joints.LEFT_ARM_1))
-            vel_limit = np.array(vel_limit, dtype=DTYPE)
-            action_space = spaces.Box(low=-vel_limit, high=vel_limit, dtype=DTYPE)
-        else:
-            _DIM_SUB_HANDS = 4
-            vel_size = Joints.HEAD_1 - Joints.LEFT_LEG_1
-            vel_limit = np.array([_MX_28_velocity] * vel_size, dtype=DTYPE)
-            action_space = spaces.Box(low=-vel_limit, high=vel_limit, dtype=DTYPE)
-    elif _CONTROL_MODE == Control_Mode.POSITION:
-        if _ENABLE_HANDS:
-            _DIM_SUB_HANDS = 0
-            action_space = spaces.Box(low=_joint_limit_low, high=_joint_limit_high, dtype=DTYPE)
-        else:
-            _DIM_SUB_HANDS = 4
-            action_space = spaces.Box(low=_joint_limit_low[Joints.LEFT_LEG_1:Joints.HEAD_1],
-                                      high=_joint_limit_high[Joints.LEFT_LEG_1:Joints.HEAD_1], dtype=DTYPE)
+    rnn_limit = np.array([1] * _RNN_DIM)
+    if _ENABLE_HANDS:
+        _DIM_SUB_HANDS = 0
+        vel_limit = [_MX_28_velocity] * (Joints.HEAD_1 - Joints.LEFT_LEG_1)
+        vel_limit.extend([_AX_12_velocity] * (Joints.LEFT_LEG_1 - Joints.LEFT_ARM_1))
+        vel_limit = np.array(vel_limit, dtype=DTYPE)
+        action_space = spaces.Box(low=-np.concatenate((vel_limit, rnn_limit)),
+                                  high=np.concatenate((vel_limit, rnn_limit)), dtype=DTYPE)
+    else:
+        _DIM_SUB_HANDS = 4
+        vel_size = Joints.HEAD_1 - Joints.LEFT_LEG_1
+        vel_limit = np.array([_MX_28_velocity] * vel_size, dtype=DTYPE)
+        action_space = spaces.Box(low=-np.concatenate((vel_limit, rnn_limit)),
+                                  high=np.concatenate((vel_limit, rnn_limit)), dtype=DTYPE)
 
     # Observation Space
     _OBSERVATION_DIM = _JOINT_DIM + _JOINT_DIM + _IMU_DIM + _ORN_DIM + _FEET_DIM - (
-                _DIM_SUB_HANDS * 2) + _BALL_LIMIT_DIM
+                _DIM_SUB_HANDS * 2) + _BALL_LIMIT_DIM + _RNN_DIM
     imu_limit = np.concatenate((np.array([_MAX_LIN_ACC] * int((_IMU_DIM) / 2)),
                                 np.array([_MAX_ANG_VEL] * int((_IMU_DIM) / 2))))
     # pose_limit = np.array([3.] * _POSE_DIM)
@@ -183,9 +176,9 @@ class Kick(gym.Env):
     joint_limit = np.array([np.pi] * (_JOINT_DIM))
 
     observation_limit_high = np.concatenate((joint_limit[_DIM_SUB_HANDS:Joints.HEAD_1], vel_limit * 2,
-                                             imu_limit, orn_limit, feet_limit, ball_start_limit))
+                                             imu_limit, orn_limit, feet_limit, ball_start_limit, rnn_limit))
     observation_limit_low = np.concatenate((-joint_limit[_DIM_SUB_HANDS:Joints.HEAD_1], -vel_limit * 2,
-                                            -imu_limit, -orn_limit, -feet_limit, -ball_start_limit))
+                                            -imu_limit, -orn_limit, -feet_limit, -ball_start_limit, -rnn_limit))
     observation_space = spaces.Box(low=observation_limit_low, high=observation_limit_high, dtype=DTYPE)
 
     # Reward
@@ -409,6 +402,26 @@ class Kick(gym.Env):
                                     force=self._MX_28_force,
                                     )
 
+    def motor_control_array(self, action):
+        p = self._p
+        # CLIP ACTIONS
+        # action = np.clip(action, self._joint_limit_low, self._joint_limit_high)
+        # MX-28s
+        gain = 0.78
+        for i in range(Joints.LEFT_ARM_1, Joints.HEAD_1, 1):
+            joint_cur_pos = p.getJointState(self.soccerbotUid, i)[0]
+            velocity = action[i]
+            velocity = velocity if joint_cur_pos < self._joint_limit_high[i] else -self._MX_28_velocity
+            velocity = velocity if joint_cur_pos > self._joint_limit_low[i] else self._MX_28_velocity
+            action[i] = velocity
+        p.setJointMotorControlArray(bodyIndex=self.soccerbotUid,
+                                    controlMode=pb.VELOCITY_CONTROL,
+                                    jointIndices=list(range(Joints.HEAD_1)),
+                                    targetVelocities=action,
+                                    velocityGains=[gain] * Joints.HEAD_1,
+                                    forces=[self._MX_28_force] * Joints.HEAD_1,
+                                    )
+
     def step(self, action):
         p = self._p
 
@@ -420,9 +433,10 @@ class Kick(gym.Env):
         height = np.array([self._global_pos()[2]], dtype=self.DTYPE)
         # orn = self._global_orn()
         orn = self._off_orn()
-        observation = np.concatenate((joints_pos, joints_vel, imu, orn, feet, self.init_ball_pose))
+        observation = np.concatenate(
+            (joints_pos, joints_vel, imu, orn, feet, self.init_ball_pose, action[self._JOINT_DIM:]))
 
-        self.motor_control(action)
+        self.motor_control_array(action[:self._JOINT_DIM])
 
         # 120Hz - Step Simulation
         p.stepSimulation()
@@ -432,7 +446,7 @@ class Kick(gym.Env):
 
         ## Calculate Reward, Done, Info
         # Calculate Velocity direction field
-        [lin_vel, _] = p.getBaseVelocity(self.soccerbotUid)
+        [lin_vel, ang_vel] = p.getBaseVelocity(self.soccerbotUid)
         lin_vel_xy = np.array(lin_vel, dtype=self.DTYPE)[0:2]
         distance_unit_vec = (self._ball_pos() - self._global_pos()[0:2]) \
                             / np.linalg.norm(self._ball_pos() - self._global_pos()[0:2])
@@ -469,7 +483,13 @@ class Kick(gym.Env):
         # Normal case
         else:
             done = False
-            reward = ball_velocity_forward_reward + 0.1 * velocity_forward_reward - (
+            if np.linalg.norm(self._ball_pos()[0:2] - self.init_ball_pose) > 0.3:
+                vel_reward = 0.05 * np.linalg.norm(ang_vel)
+                pos_reward = 0.05 * np.linalg.norm(self._standing_poses()[:Joints.HEAD_1] - joints_pos)
+                reward = 0.1 * ball_velocity_forward_reward - (
+                            DESIRED_HEIGHT - self._global_pos()[2]) - vel_reward - pos_reward
+            else:
+                reward = 0.1 * ball_velocity_forward_reward + 0.05 * velocity_forward_reward - (
                         DESIRED_HEIGHT - self._global_pos()[2])
         '''
         elif (np.sum(ground_truth_feet[0:4]) < 2) and (np.sum(ground_truth_feet[4:8]) < 2):
@@ -631,7 +651,7 @@ class Kick(gym.Env):
         joints_pos = self._joints_pos()
         joints_vel = self._joints_vel()
         orn = self._off_orn()
-        observation = np.concatenate((joints_pos, joints_vel, imu, orn, feet, self.init_ball_pose))
+        observation = np.concatenate((joints_pos, joints_vel, imu, orn, feet, self.init_ball_pose, [0] * self._RNN_DIM))
 
         # To keep up with the pipeline - 120Hz
         p.stepSimulation()

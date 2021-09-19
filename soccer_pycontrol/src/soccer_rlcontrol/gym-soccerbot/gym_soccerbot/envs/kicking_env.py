@@ -360,9 +360,9 @@ class Kick(gym.Env):
         standing_poses[Joints.HEAD_2] = 0.0
 
         standing_poses[Joints.LEFT_ARM_1] = 0.0
-        standing_poses[Joints.LEFT_ARM_2] = 2.8
+        standing_poses[Joints.LEFT_ARM_2] = 2.0
         standing_poses[Joints.RIGHT_ARM_1] = 0.0
-        standing_poses[Joints.RIGHT_ARM_2] = 2.8
+        standing_poses[Joints.RIGHT_ARM_2] = 2.0
 
         if np_random is not None:
             standing_poses[cls._DIM_SUB_HANDS:cls._JOINT_DIM] = standing_poses[cls._DIM_SUB_HANDS:cls._JOINT_DIM] + \

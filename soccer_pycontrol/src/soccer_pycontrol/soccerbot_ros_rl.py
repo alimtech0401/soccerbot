@@ -8,10 +8,10 @@ from soccerbot_ros import SoccerbotRos
 from geometry_msgs.msg import PoseStamped
 from transformation import Transformation
 from std_msgs.msg import Int32
-
+from soccerbot_rl import SoccerbotRl
 LOOP_FREQUENCY = 120
 
-class SoccerbotRosRl(SoccerbotRos):
+class SoccerbotRosRl(SoccerbotRos, SoccerbotRl):
 
     def __init__(self, pose, usePybullet=False):
         super().__init__(pose, usePybullet)
