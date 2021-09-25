@@ -46,6 +46,7 @@ class SoccerbotRl(Soccerbot):
                                          targetPositions=self.configuration_kick,
                                          forces=self.max_forces)
 
+
     def joints_pos(self):
 
         joint_states = pb.getJointStates(self.body, list(range(0, 16, 1)))

@@ -21,7 +21,7 @@ checkpoint_path = "/home/manx52/catkin_ws/src/soccerbot/soccer_pycontrol/src/soc
 
 
 class ActionController:
-    PYBULLET_STEP = 0.0083
+    PYBULLET_STEP = 0.004
 
     def __init__(self):
         pb.connect(pb.GUI)
@@ -97,14 +97,14 @@ class ActionController:
         velocity = []
         obs = []
         obs3 = []
-        # while t <= 0.1:
-        #     self.soccerbot.get_imu_raw()
-        #     if os.getenv('ENABLE_PYBULLET', True):
-        #         pb.stepSimulation()
-        #     t = t + ActionController.PYBULLET_STEP
-        #     sleep(ActionController.PYBULLET_STEP)
+        while t <= 0.9:
+            self.soccerbot.get_imu_raw()
+            if os.getenv('ENABLE_PYBULLET', True):
+                pb.stepSimulation()
+            t = t + ActionController.PYBULLET_STEP
+            sleep(ActionController.PYBULLET_STEP)
 
-        t = 0
+        # t = 0
         while t <= 5:
             if not completed:
                 observation_vector = self.get_kick_state_vector()
@@ -116,11 +116,12 @@ class ActionController:
                 observation_vector = np.clip(observation_vector, -10.0, 10.0)
 
                 action_vector = self.agent.compute_action(observation_vector)
-                action_vector = self.env.denormalize(action_vector, self.env.env.action_space.low,
-                                                     self.env.env.action_space.high,
-                                                     self.env.action_plus_range)
+                # action_vector = self.env.denormalize(action_vector, self.env.env.action_space.low,
+                #                                      self.env.env.action_space.high,
+                #                                      self.env.action_plus_range)
                 self.RNN = action_vector[16:]
-                # self.soccerbot.motor_control(action_vector[:16], joint_angles, self.env.env)
+                pb.saveBullet('hello')
+                self.soccerbot.motor_control(action_vector[:16], joint_angles, self.env.env)
             if os.getenv('ENABLE_PYBULLET', True):
                 pb.stepSimulation()
             t = t + ActionController.PYBULLET_STEP

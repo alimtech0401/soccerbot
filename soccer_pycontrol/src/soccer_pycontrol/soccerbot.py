@@ -183,22 +183,48 @@ class Soccerbot:
                                     basePosition=[pose.get_position()[0], pose.get_position()[1],
                                                   Soccerbot.standing_hip_height],
                                     baseOrientation=pose.get_orientation())
+            # head
+            standing_poses = [0.] * (20)
+            standing_poses[Joints.RIGHT_LEG_1] = 0.0
+            standing_poses[Joints.RIGHT_LEG_2] = 0.05
+            standing_poses[Joints.RIGHT_LEG_3] = 0.4
+            standing_poses[Joints.RIGHT_LEG_4] = -0.8
+            standing_poses[Joints.RIGHT_LEG_5] = 0.4
+            standing_poses[Joints.RIGHT_LEG_6] = -0.05
 
+            standing_poses[Joints.LEFT_LEG_1] = 0.0
+            standing_poses[Joints.LEFT_LEG_2] = 0.05
+            standing_poses[Joints.LEFT_LEG_3] = 0.4
+            standing_poses[Joints.LEFT_LEG_4] = -0.8
+            standing_poses[Joints.LEFT_LEG_5] = 0.4
+            standing_poses[Joints.LEFT_LEG_6] = -0.05
+
+            standing_poses[Joints.HEAD_1] = 0.0
+            standing_poses[Joints.HEAD_2] = 0.0
+
+            standing_poses[Joints.LEFT_ARM_1] = 0.0
+            standing_poses[Joints.LEFT_ARM_2] = 2.8
+            standing_poses[Joints.RIGHT_ARM_1] = 0.0
+            standing_poses[Joints.RIGHT_ARM_2] = 2.8
             # MX-28
             for i in range(Joints.LEFT_LEG_1, Joints.HEAD_1):
-                                pb.changeDynamics(self.body, i,
-                                 jointLowerLimit=-Soccerbot._joint_limit_low[i],
-                                 jointUpperLimit=Soccerbot._joint_limit_high[i],
-                                 jointLimitForce=2.5)
+                pb.resetJointState(self.body, i, standing_poses[i], 0)
+                pb.changeDynamics(self.body, i,
+                 jointLowerLimit=Soccerbot._joint_limit_low[i],
+                 jointUpperLimit=Soccerbot._joint_limit_high[i],
+                 jointLimitForce=2.5)
             # AX-12
             for i in range(Joints.LEFT_ARM_1, Joints.LEFT_LEG_1):
+                pb.resetJointState(self.body, i, standing_poses[i], 0)
                 pb.changeDynamics(self.body, i,
-                                 jointLowerLimit=-Soccerbot._joint_limit_low[i],
+                                 jointLowerLimit=Soccerbot._joint_limit_low[i],
                                  jointUpperLimit=Soccerbot._joint_limit_high[i],
                                  jointLimitForce=1.5)
+            pb.resetJointState(self.body, Joints.HEAD_1, standing_poses[Joints.HEAD_1])
             pb.changeDynamics(self.body, Joints.HEAD_1,
                              jointLowerLimit=-np.pi, jointUpperLimit=np.pi,
                              jointLimitForce=self._AX_12_force)
+            pb.resetJointState(self.body, Joints.HEAD_2, standing_poses[Joints.HEAD_2])
             pb.changeDynamics(self.body, Joints.HEAD_2,
                              jointLowerLimit=-np.pi, jointUpperLimit=np.pi,
                              jointLimitForce=1.5)
@@ -245,11 +271,11 @@ class Soccerbot:
             for i in range(0, 20):
                 self.max_forces.append(pb.getJointInfo(self.body, i)[10])
 
-            pb.setJointMotorControlArray(bodyIndex=self.body,
-                                         controlMode=pb.POSITION_CONTROL,
-                                         jointIndices=list(range(0, 20, 1)),
-                                         targetPositions=self.get_angles(),
-                                         forces=self.max_forces)
+            # pb.setJointMotorControlArray(bodyIndex=self.body,
+            #                              controlMode=pb.POSITION_CONTROL,
+            #                              jointIndices=list(range(0, 20, 1)),
+            #                              targetPositions=self.get_angles(),
+            #                              forces=self.max_forces)
 
         self.current_step_time = 0
 

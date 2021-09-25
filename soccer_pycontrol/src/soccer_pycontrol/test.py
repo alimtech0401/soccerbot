@@ -375,10 +375,11 @@ class ActionTest(TestCase):
         # TODO create a ball @shahryar
         self.action_controller.ball.set_position((0.15, 0, 0.1))
         # self.action_controller.ball.set_velocity([0, 0])
-        self.action_controller.soccerbot.setPose(Transformation([0, 0, 0.29], [0.00000, 0, 0, 1]))
+        self.action_controller.soccerbot.setPose(Transformation([0, 0, 0.0], [0.00000, 0, 0, 1]))
         self.action_controller.soccerbot.ready_kick()
         print("Getting ready")
-        self.action_controller.wait(100)
+        # self.action_controller.wait(100)
 
         self.action_controller.run("kick")
+
         pass
