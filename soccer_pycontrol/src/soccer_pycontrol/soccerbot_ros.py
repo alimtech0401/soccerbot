@@ -75,11 +75,7 @@ class SoccerbotRos(Soccerbot):
         for i, n in enumerate(self.motor_names):
             js.name.append(n)
             js.position.append(self.get_angles()[i])
-        try:
-            self.pub_all_motor.publish(js)
-        except rospy.exceptions.ROSException as ex:
-            print(ex)
-            exit(0)
+        self.pub_all_motor.publish(js)
 
     def stepPath(self, t, verbose=False):
         super(SoccerbotRos, self).stepPath(t, verbose=verbose)
@@ -91,15 +87,12 @@ class SoccerbotRos(Soccerbot):
         base_orientation = self.pose.get_orientation()
         self.odom_pose = tr(base_pose, base_orientation)
 
-    def publishPath(self, robot_path=None):
-        if robot_path is None:
-            robot_path = self.robot_path
-
+    def publishPath(self):
         p = Path()
         p.header.frame_id = "world"
         p.header.stamp = rospy.Time.now()
-        for i in range(0, robot_path.bodyStepCount() + 1, 1):
-            step = robot_path.getBodyStepPose(i)
+        for i in range(0, self.robot_path.bodyStepCount() + 1, 1):
+            step = self.robot_path.getBodyStep(i)
             position = step.get_position()
             orientation = step.get_orientation()
             pose = PoseStamped()
@@ -169,7 +162,6 @@ class SoccerbotRos(Soccerbot):
         pass
 
     def get_imu(self):
-        assert(self.imu_ready)
         return tr([0, 0, 0], [self.imu_msg.orientation.x, self.imu_msg.orientation.y, self.imu_msg.orientation.z,
                               self.imu_msg.orientation.w])
 
