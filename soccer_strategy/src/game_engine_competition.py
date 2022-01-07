@@ -574,7 +574,7 @@ class GameEngineCompetition(game_engine.GameEngine):
                             config.position_map_kickoff(config.PENALTYSHOOT_START_POSITION, self.gameState.hasKickOff)
                         )
 
-                self.localization_mode(self.friendly[self.robot_id - 1])
+                self.localization_mode(self.friendly[int(self.robot_id) - 1])
 
 
         # READY
@@ -585,7 +585,7 @@ class GameEngineCompetition(game_engine.GameEngine):
                 self.resume_all_robot()
                 self.previous_gameState.gameState = GameState.GAMESTATE_READY
                 if not self.has_localized:
-                    self.localization_mode(self.friendly[self.robot_id - 1])
+                    self.localization_mode(self.friendly[int(self.robot_id) - 1])
 
             if rostime % GameEngineCompetition.STRATEGY_UPDATE_INTERVAL < self.rostime_previous % GameEngineCompetition.STRATEGY_UPDATE_INTERVAL:
                 for robot in self.friendly:
