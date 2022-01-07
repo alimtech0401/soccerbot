@@ -230,7 +230,8 @@ class SoccerbotControllerRos(SoccerbotController):
                 self.soccerbot.publishAngles()  # Disable to stop walking
                 pb.stepSimulation()
 
-            self.t = self.t + SoccerbotController.PYBULLET_STEP
+
+            self.t = self.t + SoccerbotController.PYBULLET_STEP #+ SoccerbotController.PYBULLET_STEP + SoccerbotController.PYBULLET_STEP + SoccerbotController.PYBULLET_STEP
 
             try:
                 r.sleep()

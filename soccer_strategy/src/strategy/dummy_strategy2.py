@@ -54,7 +54,7 @@ class DummyStrategy2(Strategy):
             if abs(ball.get_position()[1]) < 3.5 and abs(ball.get_position()[0]) < 5:
 
                 current_closest = self.who_has_the_ball(friendly, ball)  # Guess who has the ball
-                if current_closest is not None:  # and current_closest.send_nav:
+                if current_closest is not None and current_closest.send_nav:
 
                     # generate destination pose
                     ball_position = ball.get_position()
@@ -94,11 +94,11 @@ class DummyStrategy2(Strategy):
                     print("Angle between player and ball")
                     print(nav_angle__diff)
                     distance_of_player_to_ball = np.linalg.norm(player_position - ball_position)
-                    if distance_of_player_to_ball < 0.205 and abs(nav_angle__diff) > 0.15:
+                    if distance_of_player_to_ball < 0.21 and abs(nav_angle__diff) > 0.15:
                         print("robot ball angle too large, unable to kick " + str(abs(nav_angle__diff)))
                     print("Distance between player and ball")
                     print(distance_of_player_to_ball)
-                    if distance_of_player_to_ball < 0.205:
+                    if distance_of_player_to_ball < 0.18:
                         if nav_angle__diff > 0.03:
                             # right foot
                             current_closest.kick_with_right_foot = True
@@ -111,6 +111,7 @@ class DummyStrategy2(Strategy):
                         current_closest.status = Robot.Status.KICKING
                         current_closest.set_kick_velocity(unit * current_closest.max_kick_speed)
                     else:
+                        pass
                         current_closest.set_navigation_position(destination_position_biased)
                         # self.move_player_to(current_closest, destination_position_biased)
         else:

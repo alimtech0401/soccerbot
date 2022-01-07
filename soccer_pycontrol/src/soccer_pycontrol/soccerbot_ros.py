@@ -57,7 +57,7 @@ class SoccerbotRos(Soccerbot):
     def localization_mode_callback(self, msg):
 
         self.localization_mode = msg.data
-        print('self.localization_mode: ', self.localization_mode)
+        # print('self.localization_mode: ', self.localization_mode)
 
     # def localization_callback(self, msg):
     #     self.localization_reset = msg.data

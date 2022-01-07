@@ -132,29 +132,31 @@ private:
                     Point3 floor_coordinate = floor_coordinate_close;
                     floor_coordinate.x = floor_coordinate.x * (1 - ratio2) + floor_coordinate_center.x * ratio2;
                     floor_coordinate.y = floor_coordinate.y * (1 - ratio2) + floor_coordinate_center.y * ratio2;
+//                    std::cout<<"x: "<< floor_coordinate.x << " y: "<< floor_coordinate.y <<'\n';
+                    if (floor_coordinate.x > 0.0){
+                        geometry_msgs::TransformStamped ball_pose;
+                        ball_pose.header.frame_id = robotName + "/base_footprint";
+                        ball_pose.child_frame_id = robotName + "/ball";
+                        ball_pose.header.stamp = msg->header.stamp;
+                        ball_pose.header.seq = msg->header.seq;
+                        ball_pose.transform.translation.x = floor_coordinate.x;
+                        ball_pose.transform.translation.y = floor_coordinate.y;
+                        ball_pose.transform.translation.z = floor_coordinate.z;
+                        ball_pose.transform.rotation.x = 0;
+                        ball_pose.transform.rotation.y = 0;
+                        ball_pose.transform.rotation.z = 0;
+                        ball_pose.transform.rotation.w = 1;
+                        BallDetector::br.sendTransform(ball_pose);
 
-                    geometry_msgs::TransformStamped ball_pose;
-                    ball_pose.header.frame_id = robotName + "/base_footprint";
-                    ball_pose.child_frame_id = robotName + "/ball";
-                    ball_pose.header.stamp = msg->header.stamp;
-                    ball_pose.header.seq = msg->header.seq;
-                    ball_pose.transform.translation.x = floor_coordinate.x;
-                    ball_pose.transform.translation.y = floor_coordinate.y;
-                    ball_pose.transform.translation.z = floor_coordinate.z;
-                    ball_pose.transform.rotation.x = 0;
-                    ball_pose.transform.rotation.y = 0;
-                    ball_pose.transform.rotation.z = 0;
-                    ball_pose.transform.rotation.w = 1;
-                    BallDetector::br.sendTransform(ball_pose);
-
-                    geometry_msgs::PointStamped ball_pixel;
-                    ball_pixel.header.frame_id = robotName + "/base_footprint";
-                    ball_pixel.header.seq = msg->header.seq;
-                    ball_pixel.header.stamp = msg->header.stamp;
-                    ball_pixel.point.x = xavg;
-                    ball_pixel.point.y = yavg;
-                    ball_pixel.point.z = 0;
-                    ballPixelPublisher.publish(ball_pixel);
+                        geometry_msgs::PointStamped ball_pixel;
+                        ball_pixel.header.frame_id = robotName + "/base_footprint";
+                        ball_pixel.header.seq = msg->header.seq;
+                        ball_pixel.header.stamp = msg->header.stamp;
+                        ball_pixel.point.x = xavg;
+                        ball_pixel.point.y = yavg;
+                        ball_pixel.point.z = 0;
+                        ballPixelPublisher.publish(ball_pixel);
+                    }
 
 
 

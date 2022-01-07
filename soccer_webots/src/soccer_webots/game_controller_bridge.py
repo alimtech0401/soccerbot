@@ -225,8 +225,8 @@ class GameControllerBridge():
 
         # Only used for local run no docker
         shared_strategy_source = os.getenv('SHARED_STRATEGY_SOURCE', True)
-        if (shared_strategy_source == True and self.base_frame == 'robot1') or shared_strategy_source == False:
-            self.pub_clock.publish(msg)
+        # if (shared_strategy_source == True and self.base_frame == 'robot1') or shared_strategy_source == False:
+        self.pub_clock.publish(msg)
 
 
     def handle_real_time(self, time):

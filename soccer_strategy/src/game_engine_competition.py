@@ -59,19 +59,22 @@ class GameEngineCompetition(game_engine.GameEngine):
         self.goal_post_need_publisher = rospy.Publisher("goal_post_need", Bool, queue_size=1)
         self.field_side = True  # True for red False for blue
         self.has_localized = False
+        self.send_nav_publisher = rospy.Publisher("move_head", Bool, queue_size=1)
         # game strategy information
 
         self.robots = [
-            RobotRos(team=Robot.Team.FRIENDLY, role=Robot.Role.GOALIE, status=Robot.Status.READY, robot_name="robot1")
-            # ,
-            # RobotRos(team=Robot.Team.FRIENDLY, role=Robot.Role.LEFT_MIDFIELD, status=Robot.Status.READY, robot_name="robot2"),
-            # RobotRos(team=Robot.Team.FRIENDLY, role=Robot.Role.RIGHT_MIDFIELD, status=Robot.Status.READY, robot_name="robot3"),
+            RobotRos(team=Robot.Team.FRIENDLY, role=Robot.Role.GOALIE, status=Robot.Status.READY, robot_name="robot1"),
+            RobotRos(team=Robot.Team.FRIENDLY, role=Robot.Role.LEFT_MIDFIELD, status=Robot.Status.READY,
+                     robot_name="robot2"),
+            RobotRos(team=Robot.Team.FRIENDLY, role=Robot.Role.STRIKER, status=Robot.Status.READY, robot_name="robot3"),
+            RobotRos(team=Robot.Team.FRIENDLY, role=Robot.Role.RIGHT_MIDFIELD, status=Robot.Status.READY,
+                     robot_name="robot4")  # ,
             # RobotRos(team=Robot.Team.OPPONENT, role=Robot.Role.GOALIE, status=Robot.Status.READY, robot_name="opponent1"),
             # RobotRos(team=Robot.Team.OPPONENT, role=Robot.Role.LEFT_MIDFIELD, status=Robot.Status.READY, robot_name="opponent2"),
             # RobotRos(team=Robot.Team.OPPONENT, role=Robot.Role.RIGHT_MIDFIELD, status=Robot.Status.READY, robot_name="opponent3"),
         ]
 
-        self.friendly = self.robots[0:3]
+        self.friendly = self.robots[0:4]
 
         self.this_robot = None
         for robot in self.robots:
@@ -559,20 +562,20 @@ class GameEngineCompetition(game_engine.GameEngine):
 
         if self.gameState.gameState == GameState.GAMESTATE_INITIAL:
             # on state transition
-            self.has_localized = False
             if self.previous_gameState.gameState != GameState.GAMESTATE_INITIAL:
                 # self.stop_all_robot()
                 self.resume_all_robot()
                 self.previous_gameState.gameState = GameState.GAMESTATE_INITIAL
-
+                self.has_localized = False
                 # reset localization initial pose
                 for robot in self.friendly:
                     if self.gameState.secondaryState == GameState.STATE_PENALTYSHOOT:
                         robot.reset_initial_position(
                             config.position_map_kickoff(config.PENALTYSHOOT_START_POSITION, self.gameState.hasKickOff)
                         )
-                    else:
-                        self.localization_mode(robot)
+
+                self.localization_mode(self.friendly[self.robot_id - 1])
+
 
         # READY
         if self.gameState.gameState == GameState.GAMESTATE_READY:
@@ -582,12 +585,14 @@ class GameEngineCompetition(game_engine.GameEngine):
                 self.resume_all_robot()
                 self.previous_gameState.gameState = GameState.GAMESTATE_READY
                 if not self.has_localized:
-                    for robot in self.friendly:
-                        self.localization_mode(robot)
+                    self.localization_mode(self.friendly[self.robot_id - 1])
 
             if rostime % GameEngineCompetition.STRATEGY_UPDATE_INTERVAL < self.rostime_previous % GameEngineCompetition.STRATEGY_UPDATE_INTERVAL:
                 for robot in self.friendly:
                     if robot.status == Robot.Status.READY:
+                        msg = Bool()
+                        msg.data = True
+                        self.send_nav_publisher.publish(msg)
                         if self.field_side:  # red
                             if self.gameState.teamColor == 1:  # red
                                 robot.set_navigation_position(
@@ -610,6 +615,8 @@ class GameEngineCompetition(game_engine.GameEngine):
                                     config.position_map(config.INITIAL_POSITION, self.gameState.teamColor,
                                                         True, robot.robot_id)
                                 )
+                        msg.data = False
+                        self.send_nav_publisher.publish(msg)
 
         # SET
         if self.gameState.gameState == GameState.GAMESTATE_SET:
