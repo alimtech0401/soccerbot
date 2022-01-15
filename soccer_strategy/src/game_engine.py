@@ -1,26 +1,18 @@
 import random
 from vispy import scene, app
-from vispy.scene import visuals, transforms
-from vispy.scene.visuals import Polygon, Ellipse, Rectangle, RegularPolygon
 from vispy.color import Color
 
 from robot import Robot
 from ball import Ball
-from strategy.dummy_strategy import DummyStrategy
 # from strategy.team_strategy import TeamStrategy
 from strategy.stationary_strategy import StationaryStrategy
-from strategy.player_strategy import TeamStrategy, ScoreStrategy
-from strategy.formation_strategy import NormalFormationStrategy
+from soccer_strategy.src.formation.formation_strategy import NormalFormationStrategy
 from team_data import TeamData2D
 
-from strategy.utils import GameProperties, Field
 import math
 import numpy as np
 import copy
-import itertools
 import _thread
-
-from soccer_pycontrol import path
 
 white = Color("#ecf0f1")
 gray = Color("#121212")
