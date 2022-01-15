@@ -1,7 +1,7 @@
 import enum
 import rospy
 import tf.transformations
-from soccer_msgs.msg import TeamData
+#from soccer_msgs.msg import TeamData
 
 
 class Team_Data_Robot():
@@ -21,6 +21,11 @@ class Team_Data_Ball():
     def __init__(self):
         self.position = []
         self.covariance = []
+
+    def is_known(self):
+        if self.position is None:
+            return False
+        return len(self.position) > 0
 
 
 class Team_Data():
@@ -51,7 +56,37 @@ class Team_Data():
 
         #todo filter ball info
         ball_trans = data.robot_position.pose.position
+        #should be self.ball
         self.robots[data.robot_id].position = [ball_trans.x, ball_trans.y]
         self.robots[data.robot_id].covariance = data.robot_position.covariance
+
+#should make a team_data superclass
+class TeamData2D:
+    def __init__(self):
+        self.robots = {
+            1: Team_Data_Robot(),
+            2: Team_Data_Robot(),
+            3: Team_Data_Robot(),
+            4: Team_Data_Robot()
+        }
+        self.ball = Team_Data_Ball()
+
+    def team_data_callback(self, data):
+        robot = data[0]
+        ball = data[1]
+        if robot.robot_id in self.robots.keys():
+            self.robots[robot.robot_id].player_id = robot.robot_id
+            self.robots[robot.robot_id].position = robot.position
+            self.robots[robot.robot_id].covariance = None
+
+        self.ball.position = ball.position
+        self.ball.covariance = None
+
+
+
+
+
+
+
 
 
