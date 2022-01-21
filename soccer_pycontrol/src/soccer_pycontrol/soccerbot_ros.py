@@ -212,7 +212,7 @@ class SoccerbotRos(Soccerbot):
             angleud = math.atan2(trans[2], trans[0])
             rospy.loginfo_throttle(5, "Ball found, rotating head {} {}".format(anglelr, angleud))
 
-            if anglelr < 0.05 and angleud < 0.05:
+            if anglelr < 0.1 and angleud < 0.1:
                 head_not_moving.data = True
             else:
                 head_not_moving.data = False

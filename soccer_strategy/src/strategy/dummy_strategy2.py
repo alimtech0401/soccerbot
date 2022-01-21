@@ -8,7 +8,7 @@ from soccer_msgs.msg import GameState
 from robot import Robot
 from strategy.utils import *
 
-HAVENT_SEEN_THE_BALL_TIMEOUT = 6
+HAVENT_SEEN_THE_BALL_TIMEOUT = 5
 GRADIENT_UPDATE_INTERVAL_LENGTH = 0.5
 
 ALPHA = 0.5
@@ -129,7 +129,7 @@ class DummyStrategy2(Strategy):
                     print("Ball position timeout")
                     rospy.loginfo("Havent seen the ball for a while. Rototating robot " + player.robot_name)
                     self.havent_seen_the_ball_timeout = HAVENT_SEEN_THE_BALL_TIMEOUT
-                    turn_position = [player_position[0], player_position[1], player_angle + math.pi]
+                    turn_position = [player_position[0], player_position[1], player_angle + (math.pi/2.0)]
                     player.set_navigation_position(turn_position)
 
         # If the robot is walking and a detected obstacle in the direction of the robot
