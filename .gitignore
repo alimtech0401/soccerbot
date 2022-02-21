@@ -30,4 +30,4 @@ cmake-build-debug
 /soccer_common/credentials.json
 
 /soccer_rlcontrol/bez_isaacgym/runs
-/soccer_rlcontrol/resources/assets
+/soccer_rlcontrol/bez_isaacgym/resources/assets

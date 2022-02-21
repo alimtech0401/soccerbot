@@ -1,8 +1,8 @@
 import numpy as np
 import math
 import enum
-from soccer_rlcontrol.resources.library.pycontrol.src.soccer_pycontrol.path import Path
-from soccer_rlcontrol.resources.library.geometry.src.soccer_geometry.transformation import Transformation as tr
+from resources.library.pycontrol.src.soccer_pycontrol.path import Path
+from resources.library.geometry.src.soccer_geometry.transformation import Transformation as tr
 import matplotlib.pyplot as plt
 from copy import deepcopy
 

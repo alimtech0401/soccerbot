@@ -9,6 +9,10 @@ import rospy
 from play import LaunchModel
 import torch
 
+from resources.library.geometry.src.soccer_geometry.transformation import Transformation
+from resources.library.pycontrol.src.soccer_pycontrol import soccerbot_controller
+from resources.library.trajectories.src.soccer_trajectories import SoccerTrajectoryClass
+
 
 # useful sudo apt-get install -y python3-rospy
 def run_model(obj, env):
@@ -97,6 +101,12 @@ def run_model(obj, env):
                 sum_game_res += game_res
 
 
+def zero_action(env):
+    action = torch.zeros(env.actions.size(), dtype=torch.float, device=env.device)
+    env.step(action)
+    time.sleep(0.00833)
+
+
 if __name__ == '__main__':
 
     rospy.init_node("soccer_rlcontrol")
@@ -115,14 +125,19 @@ if __name__ == '__main__':
     obj.player.restore(obj.runner.load_path)
     env = obj.player.env
 
+    # Trajectory Test
+    walker = soccerbot_controller.SoccerbotController(env, 0)
+    trajectory_class = SoccerTrajectoryClass(env, 0)
 
-    def zero_action(env):
-        action = torch.zeros(env.actions.size(), dtype=torch.float, device=env.device)
-        env.step(action)
-        time.sleep(0.00833)
-
+    # Walk Test
+    walker.ready()
+    walker.wait(100)
+    walker.setGoal(Transformation([2, 0, 0], [0, 0, 0, 1]))
 
     while not rospy.is_shutdown():
         run_model(obj, env)
 
+        # trajectory_class.run_trajectory("rightkick")
+        # walker.run_ros()
         # zero_action(env)
+        pass

@@ -117,7 +117,7 @@ class KickRosEnv(RosTask):
                          headless=headless)
 
         # simulation parameters
-        self.dt = self.cfg["sim"]["dt"] # / self.cfg["sim"]["substeps"]
+        self.dt = self.cfg["sim"]["dt"]  # / self.cfg["sim"]["substeps"]
 
         # TODO Implement
         self.orn_limit = torch.tensor([1.] * self.orn_dim, device=self.device)
@@ -126,6 +126,8 @@ class KickRosEnv(RosTask):
 
         # Setting default positions
         self.default_dof_pos = torch.zeros(self.num_envs, self.dof_dim, dtype=torch.float, device=self.device,
+                                           requires_grad=False)
+        self.default_dof_pos_ext = torch.zeros(self.num_envs, self.dof_dim, dtype=torch.float, device=self.device,
                                            requires_grad=False)
         self.dof_pos_limits_upper = torch.zeros_like(self.default_dof_pos)
         self.dof_pos_limits_lower = torch.zeros_like(self.default_dof_pos)
@@ -149,6 +151,27 @@ class KickRosEnv(RosTask):
             "head_motor_0",
             "head_motor_1"
         ]
+        self.dof_names_ext = [
+            "head_motor_0",
+            "head_motor_1",
+            "left_arm_motor_0",
+            "left_arm_motor_1",
+            "left_leg_motor_0",
+            "left_leg_motor_1",
+            "left_leg_motor_2",
+            "left_leg_motor_3",
+            "left_leg_motor_4",
+            "left_leg_motor_5",
+            "right_arm_motor_0",
+            "right_arm_motor_1",
+            "right_leg_motor_0",
+            "right_leg_motor_1",
+            "right_leg_motor_2",
+            "right_leg_motor_3",
+            "right_leg_motor_4",
+            "right_leg_motor_5"
+
+        ]
 
         for i in range(self.cfg["env"]["numActions"]):
             name = self.dof_names[i]
@@ -156,6 +179,10 @@ class KickRosEnv(RosTask):
             self.default_dof_pos[:, i] = angle
             self.dof_pos_limits_upper[:, i] = self.named_joint_limit_high[name]
             self.dof_pos_limits_lower[:, i] = self.named_joint_limit_low[name]
+
+        for i, name in enumerate(self.dof_names_ext):
+            dof_index = self.dof_names.index(name)
+            self.default_dof_pos_ext[:, i] = self.default_dof_pos[..., dof_index]
 
         # initialize some data used later on
         self.actions = torch.zeros_like(self.default_dof_pos)
@@ -212,24 +239,33 @@ class KickRosEnv(RosTask):
         self.reset_idx()
 
     def imu_callback(self, imu: Imu):
-        lin_accel = torch.tensor(np.array([imu.linear_acceleration.x , imu.linear_acceleration.y, imu.linear_acceleration.z]), device=self.device)
-        ang_vel = torch.tensor(np.array([imu.angular_velocity.x , imu.angular_velocity.y, imu.angular_velocity.z]), device=self.device)
+        lin_accel = torch.tensor(
+            np.array([imu.linear_acceleration.x, imu.linear_acceleration.y, imu.linear_acceleration.z]),
+            device=self.device)
+        ang_vel = torch.tensor(np.array([imu.angular_velocity.x, imu.angular_velocity.y, imu.angular_velocity.z]),
+                               device=self.device)
         self.imu[0] = torch.cat((lin_accel, ang_vel))
-        self.root_orient_bez[0] = torch.tensor(np.array([imu.orientation.x , imu.orientation.y, imu.orientation.z, imu.orientation.w]), device=self.device)
+        self.root_orient_bez[0] = torch.tensor(
+            np.array([imu.orientation.x, imu.orientation.y, imu.orientation.z, imu.orientation.w]), device=self.device)
 
     def feet_callback(self, pressure_sensors: Int8MultiArray):
         self.feet[0] = torch.tensor(pressure_sensors.data, device=self.device)
 
     def dofStateCallback(self, dofState: JointState):
         self.dof_pos_bez[0] = torch.tensor(dofState.position, device=self.device)
-        self.dof_vel_bez[0] = (self.dof_pos_bez[0] - self.prev_dof_pos_bez[0]) / 0.00833# self.dt
+        self.dof_vel_bez[0] = (self.dof_pos_bez[0] - self.prev_dof_pos_bez[0]) / 0.00833  # self.dt
         self.prev_dof_pos_bez[0] = self.dof_pos_bez[0]
 
     def pre_physics_step(self, actions):
         # implement pre-physics simulation code here
         #    - e.g. apply actions
         self.actions = actions.clone().to(self.device)
-        self.actions[..., self.dof_dim-2:self.dof_dim] = 0.0  # Remove head action
+        temp_actions = actions.clone().to(self.device)
+        for i, name in enumerate(self.dof_names):
+            dof_index = self.dof_names_ext.index(name)
+            self.actions[..., i] = temp_actions[..., dof_index]
+
+        self.actions[..., self.dof_dim - 2:self.dof_dim] = 0.0  # Remove head action
         print("self.action: ", self.actions.cpu().numpy())
         # Position Control
         targets = tensor_clamp(self.actions + self.default_dof_pos, self.dof_pos_limits_lower,
@@ -404,6 +440,7 @@ def compute_off_orn(
     vec = torch.cat((sin.reshape((-1, 1)), -cos.reshape((-1, 1))), dim=1)
 
     return vec
+
 
 @torch.jit.script
 def compute_bez_reward(

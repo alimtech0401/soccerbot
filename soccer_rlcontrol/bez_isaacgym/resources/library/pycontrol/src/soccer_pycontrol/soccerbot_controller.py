@@ -55,10 +55,9 @@ class SoccerbotController:
                 self.soccerbot.apply_imu_feedback(t, self.soccerbot.get_imu())
 
                 action = torch.tensor(self.soccerbot.get_angles(), dtype=torch.float, device=self.env.device)
-                print('Here: ', action)
-                print(self.env.default_dof_pos[0])
-                action = action - self.env.default_dof_pos[0]
-                print(action)
+
+                action = action - self.env.default_dof_pos_ext[0]
+
                 self.env.step(action)
 
                 self.soccerbot.current_step_time = self.soccerbot.current_step_time + self.soccerbot.robot_path.step_size

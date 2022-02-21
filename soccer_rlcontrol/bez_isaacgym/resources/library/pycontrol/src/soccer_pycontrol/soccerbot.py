@@ -1,8 +1,8 @@
 import os
 import enum
 
-from soccer_rlcontrol.resources.library.pycontrol.src.soccer_pycontrol.robotpath import Robotpath
-from soccer_rlcontrol.resources.library.geometry.src.soccer_geometry.transformation import Transformation as tr
+from resources.library.pycontrol.src.soccer_pycontrol.robotpath import Robotpath
+from resources.library.geometry.src.soccer_geometry.transformation import Transformation as tr
 
 import matplotlib.pyplot as plt
 import math
@@ -12,95 +12,52 @@ import numpy as np
 
 
 class Joints(enum.IntEnum):
-    # sim
-    # HEAD_1 = 0
-    # HEAD_2 = 1
-    # LEFT_ARM_1 = 2
-    # LEFT_ARM_2 = 3
-    # LEFT_LEG_1 = 4
-    # LEFT_LEG_2 = 5
-    # LEFT_LEG_3 = 6
-    # LEFT_LEG_4 = 7
-    # LEFT_LEG_5 = 8
-    # LEFT_LEG_6 = 9
-    # RIGHT_ARM_1 = 10
-    # RIGHT_ARM_2 = 11
-    # RIGHT_LEG_1 = 12
-    # RIGHT_LEG_2 = 13
-    # RIGHT_LEG_3 = 14
-    # RIGHT_LEG_4 = 15
-    # RIGHT_LEG_5 = 16
-    # RIGHT_LEG_6 = 17
-    # HEAD_CAMERA = 18
-    # IMU = 19
-    #real
-    LEFT_ARM_1 = 0
-    LEFT_ARM_2 = 1
-    RIGHT_ARM_1 = 2
-    RIGHT_ARM_2 = 3
+    HEAD_1 = 0
+    HEAD_2 = 1
+    LEFT_ARM_1 = 2
+    LEFT_ARM_2 = 3
     LEFT_LEG_1 = 4
     LEFT_LEG_2 = 5
     LEFT_LEG_3 = 6
     LEFT_LEG_4 = 7
     LEFT_LEG_5 = 8
     LEFT_LEG_6 = 9
-    RIGHT_LEG_1 = 10
-    RIGHT_LEG_2 = 11
-    RIGHT_LEG_3 = 12
-    RIGHT_LEG_4 = 13
-    RIGHT_LEG_5 = 14
-    RIGHT_LEG_6 = 15
-    HEAD_1 = 16
-    HEAD_2 = 17
+    RIGHT_ARM_1 = 10
+    RIGHT_ARM_2 = 11
+    RIGHT_LEG_1 = 12
+    RIGHT_LEG_2 = 13
+    RIGHT_LEG_3 = 14
+    RIGHT_LEG_4 = 15
+    RIGHT_LEG_5 = 16
+    RIGHT_LEG_6 = 17
     HEAD_CAMERA = 18
     IMU = 19
 
 
 class Links(enum.IntEnum):
-    # sim
-    # TORSO = -1
-    # HEAD_1 = 0
-    # HEAD_2 = 1
-    # LEFT_ARM_1 = 2
-    # LEFT_ARM_2 = 3
-    # LEFT_LEG_1 = 4
-    # LEFT_LEG_2 = 5
-    # LEFT_LEG_3 = 6
-    # LEFT_LEG_4 = 7
-    # LEFT_LEG_5 = 8
-    # LEFT_LEG_6 = 9
-    # RIGHT_ARM_1 = 10
-    # RIGHT_ARM_2 = 11
-    # RIGHT_LEG_1 = 12
-    # RIGHT_LEG_2 = 13
-    # RIGHT_LEG_3 = 14
-    # RIGHT_LEG_4 = 15
-    # RIGHT_LEG_5 = 16
-    # RIGHT_LEG_6 = 17
-    # HEAD_CAMERA = 18
-    # IMU = 19
-    # real
+
     TORSO = -1
-    LEFT_ARM_1 = 0
-    LEFT_ARM_2 = 1
-    RIGHT_ARM_1 = 2
-    RIGHT_ARM_2 = 3
+    HEAD_1 = 0
+    HEAD_2 = 1
+    LEFT_ARM_1 = 2
+    LEFT_ARM_2 = 3
     LEFT_LEG_1 = 4
     LEFT_LEG_2 = 5
     LEFT_LEG_3 = 6
     LEFT_LEG_4 = 7
     LEFT_LEG_5 = 8
     LEFT_LEG_6 = 9
-    RIGHT_LEG_1 = 10
-    RIGHT_LEG_2 = 11
-    RIGHT_LEG_3 = 12
-    RIGHT_LEG_4 = 13
-    RIGHT_LEG_5 = 14
-    RIGHT_LEG_6 = 15
-    HEAD_1 = 16
-    HEAD_2 = 17
+    RIGHT_ARM_1 = 10
+    RIGHT_ARM_2 = 11
+    RIGHT_LEG_1 = 12
+    RIGHT_LEG_2 = 13
+    RIGHT_LEG_3 = 14
+    RIGHT_LEG_4 = 15
+    RIGHT_LEG_5 = 16
+    RIGHT_LEG_6 = 17
     HEAD_CAMERA = 18
     IMU = 19
+
 
 class Soccerbot:
     standing_hip_height = 0.36  # Hardcoded for now, todo calculate this

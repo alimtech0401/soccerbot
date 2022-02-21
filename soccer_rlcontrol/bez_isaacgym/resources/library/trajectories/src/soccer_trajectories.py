@@ -22,7 +22,8 @@ class Trajectory:
         self.time_to_last_pose = 1  # seconds
         self.env = env
         self.env_ids = env_ids
-        with open(os.path.join(os.getcwd(), 'cfg/task/bez_kick_test.yaml'), 'r') as f:
+        temp_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))
+        with open(os.path.join(temp_dir, 'cfg/task/bez_kick_test.yaml'), 'r') as f:
             self.cfg = yaml.load(f, Loader=yaml.SafeLoader)
 
         with open(trajectory_path) as f:
@@ -65,8 +66,6 @@ class Trajectory:
                     "right_arm_motor_0", "right_arm_motor_1",
                     "right_leg_motor_0", "right_leg_motor_1", "right_leg_motor_2", "right_leg_motor_3",
                     "right_leg_motor_4", "right_leg_motor_5"
-
-
                     ]
 
             position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -84,7 +83,7 @@ class Trajectory:
                 position = position_mirrored
 
             action = torch.tensor(position, dtype=torch.float, device=self.env.device)
-            action = action - self.env.default_dof_pos[0]
+            action = action - self.env.default_dof_pos_ext[0]
             self.env.step(action)
 
             t = t + 0.00833
@@ -93,7 +92,7 @@ class Trajectory:
 
 class SoccerTrajectoryClass:
     def __init__(self, env, env_ids):
-        self.trajectory_path = "//resources/library/trajectories/trajectories"
+        self.trajectory_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + "/trajectories"
         self.simulation = True
         self.trajectory_complete = True
         self.env = env
@@ -103,7 +102,7 @@ class SoccerTrajectoryClass:
         path = self.trajectory_path + "/" + "simulation_" + command + ".csv"
 
         if not os.path.exists(path):
-
+            print(path)
             return
 
         print("Now publishing: ", command)

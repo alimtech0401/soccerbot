@@ -1,6 +1,6 @@
 import functools
 import math
-from soccer_rlcontrol.resources.library.geometry.src.soccer_geometry import Transformation
+from resources.library.geometry.src.soccer_geometry import Transformation
 import numpy as np
 from scipy.special import comb
 import matplotlib.pyplot as plt
