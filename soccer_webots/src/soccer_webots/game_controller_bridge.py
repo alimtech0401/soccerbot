@@ -12,7 +12,7 @@ import tf
 from rosgraph_msgs.msg import Clock
 
 from sensor_msgs.msg import CameraInfo, Image, Imu, JointState
-from std_msgs.msg import Bool, Float64
+from std_msgs.msg import Bool, Float64, Int8MultiArray
 import messages_pb2
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3, PoseWithCovarianceStamped
@@ -61,10 +61,12 @@ class GameControllerBridge():
 
                                      ]
         self.sensor_names.extend(self.regular_sensor_names)
-        self.pressure_sensor_names = ["right_leg_foot_sensor_1", "right_leg_foot_sensor_2", "right_leg_foot_sensor_3",
-                                      "right_leg_foot_sensor_4",
-                                      "left_leg_foot_sensor_1", "left_leg_foot_sensor_2", "left_leg_foot_sensor_3",
-                                      "left_leg_foot_sensor_4"]
+        self.pressure_sensor_names = [
+            "left_leg_foot_sensor_1", "left_leg_foot_sensor_2", "left_leg_foot_sensor_3",
+            "left_leg_foot_sensor_4",
+            "right_leg_foot_sensor_1", "right_leg_foot_sensor_2", "right_leg_foot_sensor_3",
+            "right_leg_foot_sensor_4",
+        ]
         self.sensor_names.extend(self.pressure_sensor_names)
 
         self.create_publishers()
@@ -160,8 +162,7 @@ class GameControllerBridge():
         self.pub_camera = rospy.Publisher('camera/image_raw', Image, queue_size=1)
         self.pub_camera_info = rospy.Publisher('camera/camera_info', CameraInfo, queue_size=1, latch=True)
         self.pub_imu = rospy.Publisher('imu_raw', Imu, queue_size=1)
-        self.pressure_sensors_pub = {
-            i: rospy.Publisher("foot_contact_{}".format(i), Bool, queue_size=10) for i in range(8)}
+        self.pub_pressure_sensors = rospy.Publisher("foot_pressure", Int8MultiArray, queue_size=10)
         self.pub_joint_states = rospy.Publisher('joint_states', JointState, queue_size=1)
 
     def create_subscribers(self):
@@ -278,10 +279,32 @@ class GameControllerBridge():
             self.pub_imu.publish(imu_msg)
 
     def handle_bumper_measurements(self, bumpers):
-        # TODO
-        pass
-        # for bumper in bumpers:
-        #     rospy.logwarn(f"Unknown bumper: '{bumper.name}'", logger_name="rc_api")
+        if not bumpers:
+            return
+        data = {}
+        for force in bumpers:
+            name = force.name
+            if name in self.pressure_sensor_names:
+                if force.value < 0.5:
+                    data[name] = -1
+                else:
+                    data[name] = force.value
+            else:
+                rospy.logwarn(f"Unknown force measurement: '{name}'", logger_name="rc_api")
+
+        pub_data = Int8MultiArray()
+        # pub_data.header.stamp = self.stamp
+        # pub_data.header.frame_id = self.base_frame + "/imu_link"
+        pub_data.data = [data['left_leg_foot_sensor_1'],
+                         data['left_leg_foot_sensor_2'],
+                         data['left_leg_foot_sensor_3'],
+                         data['left_leg_foot_sensor_4'],
+                         data['right_leg_foot_sensor_1'],
+                         data['right_leg_foot_sensor_2'],
+                         data['right_leg_foot_sensor_3'],
+                         data['right_leg_foot_sensor_4']
+                         ]
+        self.pub_pressure_sensors.publish(pub_data)
 
     def handle_camera_measurements(self, cameras):
         for camera in cameras:
@@ -334,7 +357,8 @@ class GameControllerBridge():
 
     def handle_force_measurements(self, forces):
         for force in forces:
-            rospy.logwarn(f"Unknown force measurement: '{force.name}'", logger_name="rc_api")
+            rospy.logwarn(f"Unknown force3d measurement: '{forces.name}'", logger_name="rc_api")
+
 
     def handle_force3D_measurements(self, force3ds):
         for force3d in force3ds:

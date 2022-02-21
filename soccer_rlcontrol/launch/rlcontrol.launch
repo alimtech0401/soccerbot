@@ -1,0 +1,7 @@
+<launch>
+
+    <node pkg="soccer_rlcontrol" type="main.py" name="soccer_rlcontrol" output="screen"/>
+
+
+
+</launch>

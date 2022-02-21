@@ -8,7 +8,7 @@ from controller import Robot, Node, Field
 import rospy
 from geometry_msgs.msg import PoseArray, Pose, Point
 from sensor_msgs.msg import JointState, Imu, Image, CameraInfo
-
+from std_msgs.msg import Int8MultiArray
 
 class RobotController:
     def __init__(self, base_ns="/robot1"):
@@ -98,10 +98,12 @@ class RobotController:
         gyro_name = "imu gyro"
         camera_name = "camera"
 
-        self.pressure_sensor_names = ["right_leg_foot_sensor_1", "right_leg_foot_sensor_2", "right_leg_foot_sensor_3",
-                                      "right_leg_foot_sensor_4",
+        self.pressure_sensor_names = [
                                       "left_leg_foot_sensor_1", "left_leg_foot_sensor_2", "left_leg_foot_sensor_3",
-                                      "left_leg_foot_sensor_4"]
+                                      "left_leg_foot_sensor_4",
+                                      "right_leg_foot_sensor_1", "right_leg_foot_sensor_2", "right_leg_foot_sensor_3",
+                                      "right_leg_foot_sensor_4",
+                                      ]
         self.pressure_sensors = []
         self.external_pressure_names = self.pressure_sensor_names
         for name in self.pressure_sensor_names:
@@ -130,9 +132,10 @@ class RobotController:
         self.pub_cam = rospy.Publisher(base_ns + "/camera/image_raw", Image, queue_size=1)
         self.pub_cam_info = rospy.Publisher(base_ns + "/camera/camera_info", CameraInfo, queue_size=1, latch=True)
 
-        self.pressure_sensors_pub = {
-            i: rospy.Publisher(base_ns + "/foot_pressure_{}".format(i), Marker, queue_size=10) for i in range(8)}
+        self.pressure_sensors_vis_pub = {
+            i: rospy.Publisher(base_ns + "/foot_pressure_vis_{}".format(i), Marker, queue_size=10) for i in range(8)}
 
+        self.pressure_sensors_pub = rospy.Publisher(base_ns + "/foot_pressure", Int8MultiArray, queue_size=10)
         # publish camera info once, it will be latched
         self.cam_info = CameraInfo()
         self.cam_info.header.stamp = rospy.Time.from_seconds(self.time)
@@ -250,7 +253,9 @@ class RobotController:
         self.pub_js.publish(self.get_joint_state_msg())
 
     def get_pressure_message(self):
-
+        data = Int8MultiArray()
+        data.data = [-1 if self.pressure_sensors[i].getValue() < 1 else self.pressure_sensors[i].getValue() for i in range(8)]
+        self.pressure_sensors_pub.publish(data)
         for i in range(8):
             current_time = rospy.Time.from_sec(self.time)
 
@@ -321,4 +326,4 @@ class RobotController:
             marker_object.pose.orientation.z = 0
             marker_object.pose.orientation.w = 1
 
-            self.pressure_sensors_pub[i].publish(marker_object)
+            self.pressure_sensors_vis_pub[i].publish(marker_object)

@@ -1,102 +1,88 @@
+# Bez_IsaacGym
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+![Python](https://img.shields.io/badge/python-3.8-blue.svg)
+![Ubuntu 20.04](https://img.shields.io/badge/ubuntu-20.04-orange.svg)
+[![Documentation Status](https://readthedocs.org/projects/soccerbot/badge/?version=latest)](https://soccerbot.readthedocs.io/en/latest/?badge=latest)
+
+### About this repository
+This repository provides IsaacGym environment for the [Humanoid Robot Bez](http://utrahumanoid.ca/our-project/).
+
+The project currently uses [RL-Games 1.13](https://github.com/Denys88/rl_games) for training agents.
+
+This code is released under [LICENSE](LICENSE).
+
 # Installation
-Make sure you are in the same directory as the README
-```shell script
-sudo apt-get install python3-tk
-python3 -m pip install --user virtualenv
-virtualenv -p python3 venv
-. venv/bin/activate
-pip install -r requirements.txt
+### Pre-requisites
+The code has been tested on Ubuntu 20.04 with Python 3.8. The minimum recommended NVIDIA driver
+version for Linux is `460.32`.
+### Install IsaacGym
+Download the Isaac Gym Preview 3 release from the [website](https://developer.nvidia.com/isaac-gym), then
+follow the installation instructions in the documentation.
+
+Once Isaac Gym is installed, to install all its dependencies, run:
+```bash
+cd PATH_TO/isaacgym/python
+pip install -e .
 ```
-Then, install the gym-soccerbot package
-```shell script
-cd gym-soccerbot
+To verify the details of the installed package, run:
+```bash
+pip show isaacgym
+```
+
+### Install Bez_IsaacGym
+
+To install `Bez_IsaacGym` package and all its dependencies, run:
+```bash
+git clone git@github.com:utra-robosoccer/Bez_IsaacGym.git
+cd PATH_TO/Bez_IsaacGym
 pip install -e .
 ```
 
-# IDE Setup (Optional)
-Change your project python intepretor to the virtual environment that you just created.
+# Running
+To train or test you must be in the [`bez_isaacgym`](bez_isaacgym) folder, run this line:
+```bash
+cd PATH_TO/Bez_IsaacGym/bez_isaacgym
+```
+## Training
 
-Mark the folder soccer_rlcontrol/src as a root directory.
-In Pycharm IDE change the intepretor to the virtual environment that has been created
-`Settings` > `Project` > `Project Intepretor` > Click on the Gear > `Add` > `Virtualenv Environment` > Existing Intepreter and enter the following:
-```shell script
-/path/to/workspace/soccer_rlcontrol/venv/bin/python
-```
-Mark the `soccer_rlcontrol/` as a source root directory by right clicking the `soccer_rlcontrol/` > mark as > sources root
+We use [Hydra](https://hydra.cc/docs/intro/) to keep configuration of runs simple. You can view the main arguments to the scripts by looking in the file [`bez_isaacgym/cfg/config.yaml`](bez_isaacgym/cfg/config.yaml).
 
-# Training
-In a terminal with the activated virtualenv,
-```shell script
-. venv/bin/activate
-```
-Use one of the yaml config files (preferably one of the non-server ones to avoid the risk of crashing your computer/VM) in the `rllib_configs` directory to start the training:
-```shell script
-rllib train -f rllib_configs/your_config.yaml
-```
-## Notes on some Yaml file parameters:
-- `timesteps_total` How many simulation steps the training will end after.
-- `num_gpus` If you have no compatible nVidia nor Radeon, set this to 0. For Radeon GPUs, look into ROCm-based Tensorflow and PyTorch.
-- `num_workers` Roughly corresponds to the number of processes you'd like to simultaneously run.
-- `num_cpus_per_worker` Set to 0 so that workers aren't bound to a CPU logical core. Note that there exists a driver process that when running with tune (command above included), takes up a CPU logical core by default.
-- `num_envs_per_worker` Each worker process can spawn more than just 1 simulation environment. Ultimately having too many environments per worker will hurt the over performance and/or the computer will run out of RAM (although at a lower rate compared to adding workers).
-- `*batch*` If you are using a GPU, your VRAM might limit your batch sizes. If you are running out try reducing the parameters involving the `*batch*` keyword, especially `sgd_minibatch_size`.
+You can also set the configuration parameters from terminal by doing `{config_variable_name}={value}`. The main ones to be aware of for are:
 
-# Viewing Results
-To visually observer the trained agent, consider one of the checkpoints of your desire in the following directory format:
-```shell script
-./results/name-of-the-yaml-file/RLalgorithm_UsedGymEnironment_ID_DateOfTraining/checkpoint_n/checkpoint-n
-```
-Use the following command in the terminal while in the virtualenv created earlier:
-```shell script
-rllib rollout --run <algo> --env <env> --steps <num_steps> --config '{"num_envs_per_worker": 0, "num_workers": 0, "env_config": {"renders": true}}' <checkpoint_path> 
+* **`task`** (string): environment name to use.
+* **`num_envs`** (int): number of environment instances to run. Default to 4096.
+* **`headless`** (bool): whether to run the simulator with/without GUI.
+* **`checkpoint`** (string): To load from a checkpoint.
+* **`test`** (bool): whether to train.
+
+To train your first policy, run this line:
+```bash
+python train.py task=bez_kick 
 ```
 
-Where:
-- `<algo>` Is the algorithm the training done with. Look at the `yaml` file used and check for the `run` field value. Replace the argument with the field value from the `yaml` file.
-- `<env>` Is the Gym environment agent is trained on. Similar to the procedure for `<algo>`, look for the `env` field value in the `yaml` file.
-- `<num_steps>` Defines how many simulation steps the simulation will be running for.
-- `<checkpoint_path>` Is the path mentioned. Replace it with the path discussed above.
+## Inference and Loading Checkpoints
+Checkpoints are saved in the folder `runs/EXPERIMENT_NAME/nn` where `EXPERIMENT_NAME` 
+defaults to the task name, but can also be overridden via the `experiment` argument.
 
-## View a (somewhat) trained agent out of the box!
-### Way 1
-Simply run the following with virtualenv activated inside the `soccer_rlcontrol` directory!
-```shell script
-python esview.py
-```
-You should see something similar to [this](https://youtu.be/Xkdkml3NZ2Y).
-The agent was trained using `humanoid-ppo-server.yaml` on Intel Core i7 5820k with 16GB RAM and GTX 1050Ti with +100M samples (~0.5 day).
+To load a trained checkpoint and continue training, use the `checkpoint` argument:
 
-### Way 2
-Simply run the following with virtualenv activated inside the `soccer_rlcontrol` directory!
-```shell script
-rllib rollout --run PPO --env gym_soccerbot:walk-forward-norm-v1 --steps 1000 --config '{"num_gpus": 0, "num_envs_per_worker": 0, "num_workers": 0, "env_config": {"renders": true, "env_name": "gym_soccerbot:walk-forward-v3", "slow": true}}' ./demos/ppo-april11/checkpoint_840/checkpoint-840
-```
-You should see something similar to [this](https://youtu.be/VV2-pMmjHFw).
-The agent was trained using `humanoid-ppo-server.yaml` on AMD Threadripper 1950X with 64GB RAM and RTX 2080Ti with +800M samples (~1 day).
-
-## Running in webots
-Run the following commands to start webots
-```
-roslaunch soccerbot soccerbot_multi.launch
-```
-Wait for webots to load then run to get in proper position
-```
-rostopic pub robot1/command std_msgs/String 'data: test'
-```
-Then run the following command to start the walking engine
-```
-python walking_engine.py
+```bash
+python train.py task=bez_kick checkpoint=runs/Bez_Kick/nn/Bez_Kick.pth
 ```
 
-# Refrences
-## Open AI Gym
-The framework used to develop custom environments for our reinforcement learning tasks.
-Visit Open AI Gym Github repository [here](https://github.com/openai/gym).
+To load a trained checkpoint and only perform inference (no training), pass `test=True` 
+as an argument, along with the checkpoint name. To avoid rendering overhead, you may 
+also want to run with fewer environments using `num_envs=64`:
 
-## RLLib
-We use RLLib as a scalable set of reinforcement learning.
-Visit RLLib Github repository [here](https://github.com/ray-project/ray).
+```bash
+python train.py task=bez_kick checkpoint=runs/Bez_Kick/nn/Bez_Kick.pth test=True num_envs=64
+```
 
-## PyBullet
-Free physics simulation of our choice for reinforcement learning tasks.
-Visit PyBullet Github repository [here](https://github.com/bulletphysics/bullet3).
+Note that If there are special characters such as `[` or `=` in the checkpoint names, 
+you will need to escape them and put quotes around the string. For example,
+`checkpoint="./runs/Bez_Kick/nn/last_Bez_Kickep\=501rew\[5981.31\].pth"`
+
+## Test
+There are testing programs for sample behaviors located in [`bez_isaacgym/test`](bez_isaacgym/test).
+
+Clicking on the green button next to each function with launch the test
