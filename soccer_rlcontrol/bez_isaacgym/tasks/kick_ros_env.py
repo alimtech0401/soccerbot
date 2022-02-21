@@ -259,16 +259,16 @@ class KickRosEnv(RosTask):
     def pre_physics_step(self, actions):
         # implement pre-physics simulation code here
         #    - e.g. apply actions
-        self.actions = actions.clone().to(self.device)
-        temp_actions = actions.clone().to(self.device)
+        actions[..., 0:2] = 0.0  # Remove head action
+        self.actions = actions.clone().to(self.device) + self.default_dof_pos_ext
+        temp_actions = actions.clone().to(self.device) + self.default_dof_pos_ext
         for i, name in enumerate(self.dof_names):
             dof_index = self.dof_names_ext.index(name)
             self.actions[..., i] = temp_actions[..., dof_index]
 
-        self.actions[..., self.dof_dim - 2:self.dof_dim] = 0.0  # Remove head action
         print("self.action: ", self.actions.cpu().numpy())
         # Position Control
-        targets = tensor_clamp(self.actions + self.default_dof_pos, self.dof_pos_limits_lower,
+        targets = tensor_clamp(self.actions, self.dof_pos_limits_lower,
                                self.dof_pos_limits_upper)
         # targets = tensor_clamp(self.default_dof_pos, self.dof_pos_limits_lower,
         #                        self.dof_pos_limits_upper)
