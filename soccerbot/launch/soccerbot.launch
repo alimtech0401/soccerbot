@@ -44,12 +44,12 @@
         <arg name="map_name" value="test" unless="$(arg simulation)" />
     </include>
 
-    <include file="$(find soccerbot)/launch/modules/navigation.launch">
-        <arg name="simulation" value="$(arg simulation)" />
-    </include>
+<!--    <include file="$(find soccerbot)/launch/modules/navigation.launch">-->
+<!--        <arg name="simulation" value="$(arg simulation)" />-->
+<!--    </include>-->
 
-    <include file="$(find soccerbot)/launch/modules/strategy.launch" >
-        <arg name="goalie" value="$(arg goalie)" />
-    </include>
+<!--    <include file="$(find soccerbot)/launch/modules/strategy.launch" >-->
+<!--        <arg name="goalie" value="$(arg goalie)" />-->
+<!--    </include>-->
 
 </launch>

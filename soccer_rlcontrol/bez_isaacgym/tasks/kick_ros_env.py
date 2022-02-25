@@ -110,7 +110,7 @@ class KickRosEnv(RosTask):
 
         # Number of observation and actions
         self.cfg["env"][
-            "numObservations"] = self.dof_dim + self.dof_dim + self.imu_dim + self.orn_dim + self.feet_dim + self.ball_dim  # 54
+            "numObservations"] = self.dof_dim + self.dof_dim +  4#self.imu_dim + self.orn_dim + self.feet_dim + self.ball_dim  # 54
         self.cfg["env"]["numActions"] = self.dof_dim
 
         super().__init__(config=self.cfg, sim_device=sim_device, graphics_device_id=graphics_device_id,
@@ -129,8 +129,10 @@ class KickRosEnv(RosTask):
                                            requires_grad=False)
         self.default_dof_pos_ext = torch.zeros(self.num_envs, self.dof_dim, dtype=torch.float, device=self.device,
                                            requires_grad=False)
-        self.dof_pos_limits_upper = torch.zeros_like(self.default_dof_pos)
-        self.dof_pos_limits_lower = torch.zeros_like(self.default_dof_pos)
+        self.dof_pos_limits_upper = torch.zeros(self.dof_dim, dtype=torch.float, device=self.device,
+                                                requires_grad=False)
+        self.dof_pos_limits_lower = torch.zeros(self.dof_dim, dtype=torch.float, device=self.device,
+                                                requires_grad=False)
         self.dof_names = [
             "left_arm_motor_0",
             "left_arm_motor_1",
@@ -177,8 +179,8 @@ class KickRosEnv(RosTask):
             name = self.dof_names[i]
             angle = self.named_default_joint_angles[name]
             self.default_dof_pos[:, i] = angle
-            self.dof_pos_limits_upper[:, i] = self.named_joint_limit_high[name]
-            self.dof_pos_limits_lower[:, i] = self.named_joint_limit_low[name]
+            self.dof_pos_limits_upper[i] = self.named_joint_limit_high[name]
+            self.dof_pos_limits_lower[i] = self.named_joint_limit_low[name]
 
         for i, name in enumerate(self.dof_names_ext):
             dof_index = self.dof_names.index(name)
@@ -245,6 +247,7 @@ class KickRosEnv(RosTask):
         ang_vel = torch.tensor(np.array([imu.angular_velocity.x, imu.angular_velocity.y, imu.angular_velocity.z]),
                                device=self.device)
         self.imu[0] = torch.cat((lin_accel, ang_vel))
+        # self.root_orient_bez[0] = torch.tensor([0.0, 0.0, 0.0, 1.0], device=self.device)
         self.root_orient_bez[0] = torch.tensor(
             np.array([imu.orientation.x, imu.orientation.y, imu.orientation.z, imu.orientation.w]), device=self.device)
 
@@ -346,10 +349,11 @@ class KickRosEnv(RosTask):
             # tensors
             self.dof_pos_bez,  # 18
             self.dof_vel_bez,  # 18
-            self.imu,  # 6
-            off_orn,  # 2
-            self.feet,  # 8
-            self.ball_init  # 2
+            self.root_orient_bez # 4
+            # self.imu,  # 6
+            # off_orn,  # 2
+            # # self.feet,  # 8
+            # self.ball_init  # 2
         )
 
     def reset_idx(self):
@@ -421,11 +425,6 @@ def compute_off_orn(
     distance_to_goal = torch.sub(goal, root_pos_bez[..., 0:2])
     distance_to_goal_norm = torch.reshape(torch.linalg.norm(distance_to_goal, dim=1), (-1, 1))
     distance_unit_vec = torch.div(distance_to_goal, distance_to_goal_norm)
-
-    x = root_orient_bez[..., 0]
-    y = root_orient_bez[..., 1]
-    z = root_orient_bez[..., 2]
-    w = root_orient_bez[..., 3]
 
     roll, pitch, yaw = get_euler_xyz(root_orient_bez[..., 0:4])
     cos = torch.cos(yaw)
@@ -646,17 +645,17 @@ def compute_bez_observations(
         dof_pos_bez: Tensor,
         dof_vel_bez: Tensor,  # 18
         imu: Tensor,  # 6
-        off_orn: Tensor,  # 2
-        feet: Tensor,  # 8
-        ball_init: Tensor  # 2
+        # off_orn: Tensor,  # 2
+        # feet: Tensor,  # 8
+        # ball_init: Tensor  # 2
 
 ) -> Tensor:
     obs = torch.cat((dof_pos_bez,
                      dof_vel_bez,  # 18
                      imu,  # 6
-                     off_orn,  # 2
-                     feet,  # 8
-                     ball_init  # 2
+                     # off_orn,  # 2
+                     # feet,  # 8
+                     # ball_init  # 2
                      ), dim=-1)
 
     return obs

@@ -58,9 +58,9 @@ OmegaConf.register_new_resolver('if', lambda pred, a, b: a if pred else b)
 # num_ensv
 OmegaConf.register_new_resolver('resolve_default', lambda default, arg: default if arg == '' else arg)
 
-
+# "/home/manx52/catkin_ws/src/soccerbot/soccer_rlcontrol/bez_isaacgym/results/Bez_Kick/Normal/Bez_Stablize_1.pth"  Bez_Kick_37
 class LaunchModel:
-    def __init__(self, checkpoint="/home/manx52/catkin_ws/src/soccerbot/soccer_rlcontrol/bez_isaacgym/results/Bez_Kick/Normal/Bez_Kick_33.pth", num_envs=1, env=None):
+    def __init__(self, checkpoint="/home/manx52/catkin_ws/src/soccerbot/soccer_rlcontrol/bez_isaacgym/results/Bez_Kick/Normal/Bez_Stablize_1.pth", num_envs=1, env=None):
         initialize(config_path="./cfg")
         self.cfg = compose(config_name="config")
         self.checkpoint = checkpoint

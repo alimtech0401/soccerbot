@@ -47,7 +47,7 @@ class SoccerbotController:
     def run_ros(self, stop_on_completed_trajectory=False):
         if self.soccerbot.robot_path.duration() == 0:
             return
-
+        rsleep = rospy.Rate(1 / 0.00833)  # 0.016667 00833
         t = 0
         while not rospy.is_shutdown() and t <= self.soccerbot.robot_path.duration():
             if self.soccerbot.current_step_time <= t <= self.soccerbot.robot_path.duration():
@@ -63,7 +63,7 @@ class SoccerbotController:
                 self.soccerbot.current_step_time = self.soccerbot.current_step_time + self.soccerbot.robot_path.step_size
 
             t = t + SoccerbotController.PYBULLET_STEP
-            sleep(SoccerbotController.PYBULLET_STEP)
+            rsleep.sleep()
 
     def updateGoal(self):
         pass

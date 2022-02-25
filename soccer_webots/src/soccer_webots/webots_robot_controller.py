@@ -254,7 +254,7 @@ class RobotController:
 
     def get_pressure_message(self):
         data = Int8MultiArray()
-        data.data = [-1 if self.pressure_sensors[i].getValue() < 1 else self.pressure_sensors[i].getValue() for i in range(8)]
+        data.data = [-1 if self.pressure_sensors[i].getValue() < 1 else int(self.pressure_sensors[i].getValue()) for i in range(8)]
         self.pressure_sensors_pub.publish(data)
         for i in range(8):
             current_time = rospy.Time.from_sec(self.time)

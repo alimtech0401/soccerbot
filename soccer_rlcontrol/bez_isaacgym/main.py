@@ -3,6 +3,8 @@ import sys
 import time
 import os
 
+from isaacgym.torch_utils import torch_rand_float
+
 if "ROS_NAMESPACE" not in os.environ:
     os.environ["ROS_NAMESPACE"] = "/robot1"
 import rospy
@@ -15,7 +17,7 @@ from resources.library.trajectories.src.soccer_trajectories import SoccerTraject
 
 
 # useful sudo apt-get install -y python3-rospy
-def run_model(obj, env):
+def run_model(obj, env, rsleep):
     n_games = obj.player.games_num
     render = obj.player.render_env
     n_game_life = obj.player.n_game_life
@@ -64,7 +66,7 @@ def run_model(obj, env):
             cr += r
             steps += 1
 
-            time.sleep(0.00833)
+            rsleep.sleep()
             # if render:
             #     env.render()
             # env.render(mode='human')
@@ -101,11 +103,48 @@ def run_model(obj, env):
                 sum_game_res += game_res
 
 
-def zero_action(env):
+def zero_action(env, rsleep):
     action = torch.zeros(env.actions.size(), dtype=torch.float, device=env.device)
     env.step(action)
-    time.sleep(0.00833)
+    rsleep.sleep()
 
+def motor_action(env, rsleep):
+    # joint animation states
+    ANIM_SEEK_LOWER = 1
+    ANIM_SEEK_UPPER = 2
+    ANIM_SEEK_DEFAULT = 3
+    ANIM_FINISHED = 4
+
+    # initialize animation state
+    anim_state = ANIM_SEEK_LOWER
+    current_dof = 2
+    # check reset
+    action = torch.zeros(env.actions.size(), dtype=torch.float, device=env.device)
+    action[0][current_dof] = torch_rand_float(-1, 1, (1,1), device=env.device)
+    # # animate the dofs
+    # speed = 3
+    #
+    # if anim_state == ANIM_SEEK_LOWER:
+    #     action[0][current_dof] -= speed * env.dt
+    #     if action[0][current_dof] <= env.dof_pos_limits_lower[current_dof]:
+    #         action[0][current_dof] = env.dof_pos_limits_lower[current_dof]
+    #         anim_state = ANIM_SEEK_UPPER
+    # elif anim_state == ANIM_SEEK_UPPER:
+    #     action[0][current_dof] += speed * env.dt
+    #     if action[0][current_dof] >= env.dof_pos_limits_upper[current_dof]:
+    #         action[0][current_dof] = env.dof_pos_limits_upper[current_dof]
+    #         anim_state = ANIM_SEEK_DEFAULT
+    # if anim_state == ANIM_SEEK_DEFAULT:
+    #     action[0][current_dof] -= speed * env.dt
+    #     if action[0][current_dof] <= env.default_dof_pos[0][current_dof]:
+    #         action[0][current_dof] = env.default_dof_pos[0][current_dof]
+    #         anim_state = ANIM_FINISHED
+    # elif anim_state == ANIM_FINISHED:
+    #     action[0][current_dof] = env.default_dof_pos[0][current_dof]
+    #     # current_dof = (current_dof + 1) % 18
+    #     anim_state = ANIM_SEEK_LOWER
+    env.step(action)
+    rsleep.sleep()
 
 if __name__ == '__main__':
 
@@ -128,16 +167,17 @@ if __name__ == '__main__':
     # Trajectory Test
     walker = soccerbot_controller.SoccerbotController(env, 0)
     trajectory_class = SoccerTrajectoryClass(env, 0)
-
+    rsleep = rospy.Rate(1 / 0.00833)  # 0.016667 00833
     # Walk Test
     walker.ready()
     walker.wait(100)
     walker.setGoal(Transformation([2, 0, 0], [0, 0, 0, 1]))
 
     while not rospy.is_shutdown():
-        run_model(obj, env)
+        # run_model(obj, env, rsleep)
 
         # trajectory_class.run_trajectory("rightkick")
         # walker.run_ros()
-        # zero_action(env)
+        # zero_action(env, rsleep)
+        motor_action(env, rsleep)
         pass
